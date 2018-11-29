@@ -9,21 +9,22 @@
 #define __MQTT_TRANSPORT_H
 
 #include <stdint.h>
-#include "MQTTClient.h"
+//#include "MQTTClient.h"
 
-#define DEFAULT_MQTT_ADDRESS     "tcp://broker.mqttdashboard.com:1883"
+#define DEFAULT_MQTT_ADDRESS     "3.16.6.214"
+#define DEFAULT_MQTT_PORT   8883
 #define MQTT_QOS 1
 #define MSG_SOURCE_MQTT 0
 #define MSG_SOURCE_BLE 1
 
 extern char mqtt_address[256];
 
-typedef struct {
-    MQTTClient client;
-    char *ClientID;
-    char *ServerTopic;
-    char *ClientTopic;
-} MqttChannel;
+// typedef struct {
+//     MQTTClient client;
+//     char *ClientID;
+//     char *ServerTopic;
+//     char *ClientTopic;
+// } MqttChannel;
 
 
 //void mqttTest (void);
@@ -36,7 +37,7 @@ int mqttProviderWaitMsg(uint8_t **msg, size_t *len);
 int mqttUserSendMsg(char *send_topic, char *recv_topic, uint8_t *msg, size_t size);
 int mqttProviderSendMsg(char *send_topic, uint8_t *msg, size_t size);
 void sendProviderMessage(uint8_t *msg, size_t len);
-void ble_send(uint8_t *msg, size_t len);
+//void ble_send(uint8_t *msg, size_t len);
 
 
 #endif //__MQTT_TRANSPORT_H

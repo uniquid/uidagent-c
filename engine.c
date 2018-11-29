@@ -1,7 +1,7 @@
 /*
- * main.c
+ * engine.c
  *
- *  Created on: 11/may/2018
+ *  Created on: 11/nov/2018
  *      Author: M. Palumbi
  */
  
@@ -28,20 +28,23 @@
 #include <sys/wait.h>
 #include <pthread.h>
 
-#include "demo.h"
-#include "led.h"
-#include "diagnostic.h"
-#include "logger.h"
-#include "button.h"
+// #include "demo.h"
+// #include "led.h"
+// #include "diagnostic.h"
+// #include "logger.h"
+// #include "button.h"
+#include "engine.h"
 #include "helpers.h"
 #include "UID_identity.h"
 #include "UID_utils.h"
 #include "UID_fillCache.h"
 #include "UID_dispatch.h"
 #include "UID_capBAC.h"
-#include "yajl/yajl_tree.h"
+#ifdef MANAGE_CAPABILITY
+	#include "yajl/yajl_tree.h"
+#endif //MANAGE_CAPABILITY
 #include "mqtt_transport.h"
-#include "btgatt-server.h"
+//#include "btgatt-server.h"
 
 #define _EVER_ ;;
 //#define MAX_SIZEOF(var1, var2)  ( (sizeof((var1)) > sizeof((var2)) )? sizeof((var1)) : sizeof((var2)) )
@@ -49,6 +52,13 @@
 #define DEFAULT_INI_FILE "./demo.ini"
 #define DEFAULT_ANNOUNCE_TOPIC "UID/announce"
 #define DEFAULT_NAME_PREFIX "METER"
+
+#define linux_logger_write(...)
+#define logger_delete(f)
+#define led_blink()
+#define led_setup()
+#define button_setup()
+#define button_is_pressed() 0
 
 char *pAnnounceTopic = DEFAULT_ANNOUNCE_TOPIC;
 char *pNamePrefix = DEFAULT_NAME_PREFIX;
@@ -200,18 +210,6 @@ int MY_perform_request(uint8_t *buffer, size_t size, uint8_t *response, size_t *
 					user_33(params, result, sizeof(result));
 					RPCerror = 0;
 					break;
-				case 34:
-					user_method_status(params, result, sizeof(result));
-					RPCerror = 0;
-					break;
-				case 35:
-					user_method_led(params, result, sizeof(result));
-					RPCerror = 0;
-					break;
-				case 36:
-					user_method_diagnostic(params, result, sizeof(result));
-					RPCerror = 0;
-					break;
 				default:
 					RPCerror = UID_DISPATCH_NOTEXISTENT;
 					break;
@@ -231,6 +229,7 @@ int MY_perform_request(uint8_t *buffer, size_t size, uint8_t *response, size_t *
     return UID_MSG_OK;
 }
 
+#ifdef MANAGE_CAPABILITY
 /**
  * Check the message for capability
  */
@@ -302,6 +301,7 @@ clean_return:
     if (NULL != node) yajl_tree_free(node);
     return ret;
 }
+#endif //MANAGE_CAPABILITY
 
 /**
  * thread implementing a Service Provider
@@ -322,11 +322,13 @@ void* service_provider(void *arg)
 		if(source == MSG_SOURCE_MQTT) sourceS = "MQTT";
 		if(source == MSG_SOURCE_BLE)  sourceS = "BLE ";
 
+#ifdef MANAGE_CAPABILITY
 		if(decodeCapability(msg)) {
 			// got capability
 			free(msg);
 			continue;
 		}
+#endif //MANAGE_CAPABILITY
 		// server
 		UID_ServerChannelCtx sctx;
 		uint8_t sbuffer[ACCEPT_BUFFER];
@@ -354,7 +356,7 @@ void* service_provider(void *arg)
 		DBG_Print("UID_perform_request %s - %d\n", response, respsize);
 
 		if(source == MSG_SOURCE_MQTT) mqttProviderSendMsg(sctx.contract.serviceUserAddress, response, respsize - 1);
-		if(source == MSG_SOURCE_BLE)  ble_send(response,  respsize - 1);
+//		if(source == MSG_SOURCE_BLE)  ble_send(response,  respsize - 1);
 
 
 		UID_closeServerChannel(&sctx);
@@ -363,7 +365,7 @@ void* service_provider(void *arg)
 	return arg;
 }
 
-static int fake = 0;
+static int fake = 1;
 static char lbuffer[1024];
 static char applianceUrl[256]= {0};
 static char registryUrl[256]= {0};
@@ -423,6 +425,12 @@ void loadConfiguration(char *ini_file)
 	}
 }
 
+const char *linktrezor(void)
+{
+	extern const char SECP256K1_NAME[];
+	return SECP256K1_NAME;
+}
+
 void clear_identity(void)
 {
 	unlink("identity.db");
@@ -438,14 +446,14 @@ char myname[UID_NAME_LENGHT];
 /**
  * main - simple demo featuring a "Uniquid Machine" reference implemetation
  */
-int main( int argc, char **argv )
+void uniquidEngine( void )
 {
 	pthread_t thr;
 
 	DBG_Print("Hello!!!!\n");
 	capDBp->validCacheEntries = 0; // should be initialized by the lib!!
 
-	(program_name=strrchr(argv[0],'/'))?program_name++ :(program_name=argv[0]);
+	program_name="engine";
 	loadConfiguration(NULL);
 
 	led_setup();
@@ -457,11 +465,11 @@ int main( int argc, char **argv )
 	printf ("debug level %d\n",dbg_level);
 	printf ("MQTT broker address %s\n", mqtt_address);
 
-	if ( argc != 1 ) {
-		printf("Usage: %s\n", program_name);
-		printf("es: %s\n\n", program_name);
-		exit(1);
-	}
+	// if ( argc != 1 ) {
+	// 	printf("Usage: %s\n", program_name);
+	// 	printf("es: %s\n\n", program_name);
+	// 	exit(1);
+	// }
 
 	UID_getLocalIdentity(NULL);
 
@@ -470,15 +478,15 @@ int main( int argc, char **argv )
 	uint8_t *mac = getMacAddress(fake);
 	snprintf(myname, sizeof(myname), "%s%02x%02x%02x%02x%02x%02x",pNamePrefix, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	DBG_Print("Uniqe name %s\n", myname);
-	set_bt_name(myname);
-
-	signal(SIGCHLD, SIG_IGN);  // prevents the child process to become zombies
-	//restarts the machine if it dies (es. if it is called some error exit)
-	pid_t pid;
-	while(1) if ((pid = fork()) == 0) break;
-			else wait(NULL);
-
-	dup2(2, 1);
+//	set_bt_name(myname);
+//
+//	signal(SIGCHLD, SIG_IGN);  // prevents the child process to become zombies
+//	//restarts the machine if it dies (es. if it is called some error exit)
+//	pid_t pid;
+//	while(1) if ((pid = fork()) == 0) break;
+//			else wait(NULL);
+//
+//	dup2(2, 1);
     // start the mqttWorker thread
 	pthread_create(&thr, NULL, mqttWorker, myname);
 
@@ -493,18 +501,18 @@ int main( int argc, char **argv )
 	// contracts cache from the blockchiain
 	pthread_create(&thr, NULL, updateCache, NULL);
 
-	// start the demo thread
-	pthread_create(&thr, NULL, demo, NULL);
+//	// start the demo thread
+//	pthread_create(&thr, NULL, demo, NULL);
 
 	// start the "provider" thread
 	pthread_create(&thr, NULL, service_provider, NULL);
 
 	logger_delete(LOG_FILE_NAME);
 
-	for(_EVER_) ble_start(NULL);
+//	for(_EVER_) ble_start(NULL);
 
-	for(_EVER_) sleep(100); // wait for ever
+//	for(_EVER_) sleep(100); // wait for ever
 
-	exit( 0 );
+//	exit( 0 );
 }
 
