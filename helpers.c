@@ -1,17 +1,21 @@
 /*
- * helpers.c
+ * Copyright (c) 2016-2018. Uniquid Inc. or its affiliates. All Rights Reserved.
  *
- *  Created on: 27/lug/2016
- *      Author: M. Palumbi
+ * License is in the "LICENSE" file accompanying this file.
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+/*
+ * @file   helpers.c
+ *
+ * @date   27/lug/2016
+ * @author M. Palumbi
  */
 
 
-
-
-
-
-/* 
- * DESCRIPTION
+/**
+ * @file helpers.h
+ *
  * some usefull funtions
  * 
  */
