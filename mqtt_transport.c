@@ -215,7 +215,9 @@ static void mqttConnect(int reconnect)
             IOT_ERROR("aws_iot_mqtt_init returned error : %d ", rc);
             exit(-1);
         }
+	    // disable client certificate authentication and UniquID authentication
         client.networkStack.tlsConnectParams.pUniqIDAuth = NULL;
+        client.networkStack.tlsConnectParams.pDeviceCertLocation = "";
 
     }
     // if (NULL == client)
