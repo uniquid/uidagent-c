@@ -49,7 +49,7 @@ ssize_t readLine(int fd, void *buffer, size_t n);
 ssize_t ReadXBytes(int socket, void* buffer, unsigned int x);
 int WriteXBytes(const int sock, const char *const buffer, const size_t buflen);
 
-uint8_t *getMacAddress(int fake);
+uint8_t *getSerial( void );
 
 void LOG_print( char *fmt, ... );
 

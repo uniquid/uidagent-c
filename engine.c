@@ -31,6 +31,8 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <sys/stat.h>
+#include <inttypes.h>
 
 // #include "demo.h"
 // #include "led.h"
@@ -49,6 +51,7 @@
 #endif //MANAGE_CAPABILITY
 #include "mqtt_transport.h"
 //#include "btgatt-server.h"
+#include "jsmn.h"
 
 #define _EVER_ ;;
 //#define MAX_SIZEOF(var1, var2)  ( (sizeof((var1)) > sizeof((var2)) )? sizeof((var1)) : sizeof((var2)) )
@@ -369,64 +372,84 @@ void* service_provider(void *arg)
 	return arg;
 }
 
-static int fake = 1;
-static char lbuffer[1024];
-static char applianceUrl[256]= {0};
-static char registryUrl[256]= {0};
-static char announceTopic[256] = {0};
-static char namePrefix[UID_NAME_LENGHT - 12 - 1] = {0};
 
-/**
- * loads configuration parameters from ini_file - ./demo.ini
- *
- * es file format:
- *
- * debug level: 7
- * fake MAC: 1
- * name_prefix: METER
- * mqtt_address: tcp://10.0.0.4:1883
- * announce_topic: UID/announce
- * UID_appliance: http://appliance3.uniquid.co:8080/insight-api
- * UID_registry: http://appliance4.uniquid.co:8080/registry
- * UID_confirmations: 1
- */
-void loadConfiguration(char *ini_file)
+
+#define GOTO_ERROR( ... )  { printf( __VA_ARGS__ ); goto err; }
+
+static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
+	if (tok->type == JSMN_STRING && (int) strlen(s) == tok->end - tok->start &&
+			strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
+		return 0;
+	}
+	return -1;
+}
+
+char *awsAgentName = NULL;
+char *proxyAddress = DEFAULT_PROXY_ADDRESS;
+uint32_t proxyPort = DEFAULT_PROXY_PORT;
+
+void loadConf(void)
 {
-	FILE *f_ini;
-	char format[64];
+    int confFile = 0;
+    char *confjson = NULL;
+    int i, r;
+    jsmn_parser p;
+    jsmntok_t t[128]; /* We expect no more than 128 tokens */
 
-	if (NULL == ini_file) ini_file = DEFAULT_INI_FILE;
-	if ((f_ini = fopen(ini_file, "r")) != NULL) {
-		while(fgets(lbuffer, sizeof(lbuffer), f_ini) != NULL) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+    struct stat st;
 
-			snprintf(format, sizeof(format),  "mqtt_address: %%%zus\n", sizeof(mqtt_address) - 1);
-			sscanf(lbuffer, format,  mqtt_address);
+    if (0 != stat(CONF_FILE, &st)) GOTO_ERROR("Error accessing confFile %s\n", CONF_FILE);
+    if ( NULL == (confjson = malloc(st.st_size))) GOTO_ERROR("malloc() failed\n");
+    if ((confFile = open(CONF_FILE, O_RDONLY)) < 0) GOTO_ERROR("Error opening confFile %s\n", CONF_FILE);
+    if (st.st_size != read(confFile, confjson, st.st_size)) GOTO_ERROR("confFile read() error\n");
 
-			snprintf(format, sizeof(format),  "UID_appliance: %%%zus\n", sizeof(applianceUrl) - 1);
-			if (1 == sscanf(lbuffer, format,  applianceUrl)) UID_pApplianceURL = applianceUrl;
+    jsmn_init(&p);
+    r = jsmn_parse(&p, confjson, strlen(confjson), t, sizeof(t)/sizeof(t[0]));
+    if (r < 0) GOTO_ERROR("Failed to parse JSON: %d\n", r);
 
-			snprintf(format, sizeof(format),  "UID_registry: %%%zus\n", sizeof(registryUrl) - 1);
-			if (1 == sscanf(lbuffer, format,  registryUrl)) UID_pRegistryURL = registryUrl;
+    /* Assume the top-level element is an object */
+    if (r < 1 || t[0].type != JSMN_OBJECT) GOTO_ERROR("Object expected\n");
 
-			snprintf(format, sizeof(format),  "announce_topic: %%%zus\n", sizeof(announceTopic) - 1);
-			if (1 == sscanf(lbuffer, format,  announceTopic)) pAnnounceTopic = announceTopic;
+    /* Loop over all keys of the root object */
+    for (i = 1; i < r; i++) {
+        int size =  t[i+1].end-t[i+1].start;
+        if (jsoneq(confjson, &t[i], "mqttUrl") == 0) {
+			int start = t[i+1].start;
+			int j;
+			if (strncmp(confjson + start, "tcp://", 6) == 0) start +=6;
+			for (j=start; j<t[i+1].end; j++) if (confjson[j] == ':') break;
+            mqtt_address = strndup(confjson + start, j-start);
+			// use default port!!!!
+			//sscanf(confjson + 1 + j, "%" SCNd32, &mqtt_port);
+        }
+        if (jsoneq(confjson, &t[i], "mqttTopic") == 0) {
+            pAnnounceTopic = strndup(confjson + t[i+1].start, size);
+        }
+        if (jsoneq(confjson, &t[i], "registryUrl") == 0) {
+            UID_pRegistryURL = strndup(confjson + t[i+1].start, size + 9); // allow space for "/registry"
+			strcpy( UID_pRegistryURL + size, "/registry");
+        }
+        if (jsoneq(confjson, &t[i], "awsAgentName") == 0) {
+            awsAgentName = strndup(confjson + t[i+1].start, size);
+        }
+        if (jsoneq(confjson, &t[i], "network") == 0) {
+			if (strncmp(confjson + t[i+1].start, "ltc-testnet", size) == 0)
+				UID_pApplianceURL = LTC_TESTNET_APPLIANCE;
+			if (strncmp(confjson + t[i+1].start, "ltc-regtest", size) == 0)
+				UID_pApplianceURL = LTC_REGTEST_APPLIANCE;
+			if (strncmp(confjson + t[i+1].start, "ltc-mainnet", size) == 0)
+				UID_pApplianceURL = LTC_MAINNET_APPLIANCE;
+        }
+        if (jsoneq(confjson, &t[i], "proxyAddress") == 0) {
+            proxyAddress = strndup(confjson + t[i+1].start, size);
+        }
+        if (jsoneq(confjson, &t[i], "proxyPort") == 0) {
+			sscanf(confjson + t[i+1].start, "%" SCNd32, &proxyPort);
+        }
+    }
 
-			snprintf(format, sizeof(format),  "name_prefix: %%%zus\n", sizeof(namePrefix) - 1);
-			if (1 == sscanf(lbuffer, format,  namePrefix)) pNamePrefix = namePrefix;
-
-#pragma GCC diagnostic pop
-
-			sscanf(lbuffer, "fake MAC: %d\n", &fake);
-			sscanf(lbuffer, "debug level: %d\n", &dbg_level);
-			sscanf(lbuffer, "UID_confirmations: %d\n", &UID_confirmations);
-		}
-		fclose(f_ini);
-	}
-	else {
-		DBG_Print("ini file %s not found\n", ini_file);
-	}
+err:
+     if (confFile > 0) close(confFile);
 }
 
 const char *linktrezor(void)
@@ -445,12 +468,13 @@ void clear_identity(void)
 	led_blink();
 }
 
-char myname[UID_NAME_LENGHT];
+static char myname[UID_NAME_LENGHT];
+static char lbuffer[1024];
 
 /**
  * main - simple demo featuring a "Uniquid Machine" reference implemetation
  */
-void uniquidEngine( void )
+void uniquidEngine( char *deviceName )
 {
 	pthread_t thr;
 
@@ -458,39 +482,25 @@ void uniquidEngine( void )
 	capDBp->validCacheEntries = 0; // should be initialized by the lib!!
 
 	program_name="engine";
-	loadConfiguration(NULL);
+	loadConf();
 
 	led_setup();
 	button_setup();
 
 	if (button_is_pressed()) clear_identity();
 
-	printf ("fake MAC %d\n",fake);
 	printf ("debug level %d\n",dbg_level);
 	printf ("MQTT broker address %s\n", mqtt_address);
 
-	// if ( argc != 1 ) {
-	// 	printf("Usage: %s\n", program_name);
-	// 	printf("es: %s\n\n", program_name);
-	// 	exit(1);
-	// }
 
 	UID_getLocalIdentity(NULL);
 
 	DBG_Print("tpub: %s\n", UID_getTpub());
 
-	uint8_t *mac = getMacAddress(fake);
-	snprintf(myname, sizeof(myname), "%s%02x%02x%02x%02x%02x%02x",pNamePrefix, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	snprintf(myname, sizeof(myname), "%s", deviceName);
 	DBG_Print("Uniqe name %s\n", myname);
 //	set_bt_name(myname);
-//
-//	signal(SIGCHLD, SIG_IGN);  // prevents the child process to become zombies
-//	//restarts the machine if it dies (es. if it is called some error exit)
-//	pid_t pid;
-//	while(1) if ((pid = fork()) == 0) break;
-//			else wait(NULL);
-//
-//	dup2(2, 1);
+
     // start the mqttWorker thread
 	pthread_create(&thr, NULL, mqttWorker, myname);
 

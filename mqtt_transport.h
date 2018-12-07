@@ -18,13 +18,14 @@
 #include <stdint.h>
 //#include "MQTTClient.h"
 
-#define DEFAULT_MQTT_ADDRESS     "3.16.6.214"
-#define DEFAULT_MQTT_PORT   8883
+#define DEFAULT_MQTT_ADDRESS "3.16.6.214"
+#define DEFAULT_MQTT_PORT    8883
 #define MQTT_QOS 1
 #define MSG_SOURCE_MQTT 0
 #define MSG_SOURCE_BLE 1
 
-extern char mqtt_address[256];
+extern char *mqtt_address;
+extern uint32_t mqtt_port;
 
 // typedef struct {
 //     MQTTClient client;

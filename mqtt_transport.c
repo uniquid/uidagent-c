@@ -46,8 +46,8 @@ typedef struct {
     unsigned val;
 } SyncObject;
 
-char mqtt_address[256] = DEFAULT_MQTT_ADDRESS;
-static uint32_t port = DEFAULT_MQTT_PORT;
+char *mqtt_address = DEFAULT_MQTT_ADDRESS;
+uint32_t mqtt_port = DEFAULT_MQTT_PORT;
 int mqtt_connected = 0;
 
 //mqtt channel staus variables
@@ -200,7 +200,7 @@ static void mqttConnect(int reconnect)
         IOT_DEBUG("clientKey %s", clientKey);
         mqttInitParams.enableAutoReconnect = false; // We enable this later below
         mqttInitParams.pHostURL = mqtt_address;//HostAddress;
-        mqttInitParams.port = port;
+        mqttInitParams.port = mqtt_port;
         mqttInitParams.pRootCALocation = rootCA;
         mqttInitParams.pDeviceCertLocation = clientCRT;
         mqttInitParams.pDevicePrivateKeyLocation = clientKey;

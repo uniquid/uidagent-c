@@ -186,32 +186,22 @@ int WriteXBytes(const int sock, const char *const buffer, const size_t buflen)
 	return bytesWritten;
 }
 
-static char address[18] = "X@$!!";
 static uint8_t mac[6];
-uint8_t *getMacAddress(int fake)
+uint8_t *getSerial( void )
 {
-    FILE *fd = NULL;
 
-    if(fake) // use fake address
-    {   // try to read serial.no
-        int uniq = open("serial.no", O_RDWR|O_CREAT, 0644);
-        if (read(uniq, mac, sizeof(mac)) != sizeof(mac)) // if we cant read userial.no generate one
-        {
-            int rnd = open("/dev/random", O_RDONLY);
-            if(read(rnd, mac, sizeof(mac)) <= 0) // if we cant read /dev/random use time for seed
-                *(int32_t *)mac = time(NULL);
-            close(rnd);
-            write(uniq, mac, sizeof(mac));
-        }
-        close(uniq);
-    }
-    else
+    // try to read serial.no
+    int uniq = open("serial.no", O_RDWR|O_CREAT, 0644);
+    if (read(uniq, mac, sizeof(mac)) != sizeof(mac)) // if we cant read userial.no generate one
     {
-		fd = fopen("/sys/class/net/eth0/address", "r");
-		fgets(address, sizeof(address), fd);
-		fclose(fd);
-		sscanf(address, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", mac+0, mac+1, mac+2, mac+3, mac+4, mac+5 );
+        int rnd = open("/dev/random", O_RDONLY);
+        if(read(rnd, mac, sizeof(mac)) <= 0) // if we cant read /dev/random use time for seed
+            *(int32_t *)mac = time(NULL);
+        close(rnd);
+        write(uniq, mac, sizeof(mac));
     }
+    close(uniq);
+
     return mac;
 }
 
