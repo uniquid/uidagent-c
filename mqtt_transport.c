@@ -93,7 +93,7 @@ void sendProviderMessage(uint8_t *msg, size_t len)
 static void msgarrvd(AWS_IoT_Client *pClient, char *topicName, uint16_t topicLen, IoT_Publish_Message_Params *message, void *pData)
 {
 (void)topicLen;(void)pClient;(void)pData;
-printf("-- subscription calback fired %s\n", topicName);
+printf("-- subscription calback fired %.*s\n", topicLen,topicName);
     if (0 == memcmp(topicName, ServerTopic, topicLen)) {
         // message for the provider
         pthread_mutex_lock(&(prvdRcvSync.mtx));
@@ -171,15 +171,15 @@ int mqttProviderWaitMsg(uint8_t **msg, size_t *len)
 
 static void connlost(AWS_IoT_Client *pClient, void *data);
 
+static char rootCA[PATH_MAX + 1];
+static char clientCRT[PATH_MAX + 1];
+static char clientKey[PATH_MAX + 1];
+static char CurrentWD[PATH_MAX + 1];
 
 static void mqttConnect(int reconnect)
 {
     int rc;
 //	MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-	char rootCA[PATH_MAX + 1];
-	char clientCRT[PATH_MAX + 1];
-	char clientKey[PATH_MAX + 1];
-	char CurrentWD[PATH_MAX + 1];
 
     IoT_Client_Connect_Params connectParams = iotClientConnectParamsDefault;
     IoT_Client_Init_Params mqttInitParams = iotClientInitParamsDefault;
@@ -295,7 +295,7 @@ int mqttUserSendMsg(char *send_topic, char *recv_topic, uint8_t *msg, size_t siz
     pthread_mutex_lock(&(sync_msg.mtx));
     if (sync_msg.val & USER_BUFFER_HAS_DATA) {
         // previous message not sent. return error.
-        pthread_cond_signal(&(sync_msg.var));
+        //pthread_cond_signal(&(sync_msg.var));
         pthread_mutex_unlock(&(sync_msg.mtx));
         return 1;
     }
@@ -314,7 +314,7 @@ int mqttUserSendMsg(char *send_topic, char *recv_topic, uint8_t *msg, size_t siz
     usrStopic = strdup(send_topic);
     usrRtopic = strdup(recv_topic);
     sync_msg.val |= USER_BUFFER_HAS_DATA;
-    pthread_cond_signal(&(sync_msg.var));
+    //pthread_cond_signal(&(sync_msg.var));
     pthread_mutex_unlock(&(sync_msg.mtx));
    return 0;
 }
@@ -325,7 +325,7 @@ int mqttProviderSendMsg(char *send_topic, uint8_t *msg, size_t size)
     pthread_mutex_lock(&(sync_msg.mtx));
     if (sync_msg.val & PROVIDER_BUFFER_HAS_DATA) {
         // previous message not sent. return error.
-        pthread_cond_signal(&(sync_msg.var));
+        //pthread_cond_signal(&(sync_msg.var));
         pthread_mutex_unlock(&(sync_msg.mtx));
         return 1;
     }
@@ -334,7 +334,7 @@ int mqttProviderSendMsg(char *send_topic, uint8_t *msg, size_t size)
     memcpy(prvdSndMsg, msg, size);
     prvdStopic = strdup(send_topic);
     sync_msg.val |= PROVIDER_BUFFER_HAS_DATA;
-    pthread_cond_signal(&(sync_msg.var));
+    //pthread_cond_signal(&(sync_msg.var));
     pthread_mutex_unlock(&(sync_msg.mtx));
    return 0;
 }
@@ -352,24 +352,8 @@ static void connlost(AWS_IoT_Client *pClient, void *context)
     //mqttConnect();
     pthread_mutex_lock(&(sync_msg.mtx));
     sync_msg.val |= CONNECTION_LOST;
-    pthread_cond_signal(&(sync_msg.var));
+    //pthread_cond_signal(&(sync_msg.var));
     pthread_mutex_unlock(&(sync_msg.mtx));
-}
-
-void *mqttYeld(void *ctx)
-{
-    int state = 0;
-    int res = 0;
-    while (1)
-    {
-        //state = aws_iot_mqtt_get_client_state(&client);
-        //printf("##### yeld.  state = %d\n", state);
-        res = aws_iot_mqtt_yield(&client, 200);
-        if (SUCCESS != res) usleep(300000);
-        usleep(200000);
-        // printf("yeld thread state = %d res = %d\n", state, res);
-    }
-    return NULL;
 }
 
 /**
@@ -383,15 +367,12 @@ void *mqttWorker(void *ctx)
     ServerTopic = ctx;
     mqttConnect(0);
 
-	pthread_create(&thr, NULL, mqttYeld, NULL);
-    sleep(1);
-
     IoT_Publish_Message_Params params_usrSndMsg = {.qos = MQTT_QOS, .isRetained = 0};
     IoT_Publish_Message_Params params_prvdSndMsg = {.qos = MQTT_QOS, .isRetained = 0};
 
 
-    pthread_mutex_lock(&(sync_msg.mtx));
     while(1) {
+        pthread_mutex_lock(&(sync_msg.mtx));
         if (sync_msg.val & USER_BUFFER_HAS_DATA) {
             // I have an user message! working on it
             
@@ -445,7 +426,13 @@ printf("publish %.*s res = %d\n", (int)params_prvdSndMsg.payloadLen, (char *)par
 
             sync_msg.val ^= CONNECTION_LOST;
         }
-        pthread_cond_wait(&(sync_msg.var), &(sync_msg.mtx));
+        //pthread_cond_wait(&(sync_msg.var), &(sync_msg.mtx));
+        pthread_mutex_unlock(&(sync_msg.mtx));
+        int res = aws_iot_mqtt_yield(&client, 200);
+        if (SUCCESS != res) {
+            printf("aws_iot_mqtt_yield() return %d\n", res);
+            usleep(300000);
+        }
     }
     return 0;
 }
