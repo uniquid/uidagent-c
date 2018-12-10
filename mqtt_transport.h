@@ -16,7 +16,6 @@
 #define __MQTT_TRANSPORT_H
 
 #include <stdint.h>
-//#include "MQTTClient.h"
 
 #define DEFAULT_MQTT_ADDRESS "3.16.6.214"
 #define DEFAULT_MQTT_PORT    8883
@@ -26,16 +25,6 @@
 
 extern char *mqtt_address;
 extern uint32_t mqtt_port;
-
-// typedef struct {
-//     MQTTClient client;
-//     char *ClientID;
-//     char *ServerTopic;
-//     char *ClientTopic;
-// } MqttChannel;
-
-
-//void mqttTest (void);
 
 #define mqttFree(ptr) MQTTClient_free(ptr)
 

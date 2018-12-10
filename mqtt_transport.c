@@ -36,8 +36,7 @@
 /**
  * @brief Default cert location
  */
-//static char certDirectory[PATH_MAX + 1] = "../../../certs";
-static char certDirectory[PATH_MAX + 1] = "../../../../rootCA/";
+static char certDirectory[PATH_MAX + 1] = "../../../certs";
 
 #define SYNCOBJECT_INITIALIZER { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0 }
 typedef struct {
@@ -108,8 +107,6 @@ printf("-- subscription calback fired %.*s\n", topicLen,topicName);
         memcpy(prvdRcvMsg, message->payload, message->payloadLen);
         prvdRcvMsg[message->payloadLen] = 0;
         printf("msg -- %s --\n", prvdRcvMsg);
-//        MQTTClient_freeMessage(&message);
-//        MQTTClient_free(topicName);
         prvdRcvSync.val = 1;
         pthread_cond_signal(&(prvdRcvSync.var));
         pthread_mutex_unlock(&(prvdRcvSync.mtx));
@@ -127,16 +124,12 @@ printf("-- subscription calback fired %.*s\n", topicLen,topicName);
         usrRcvMsg = malloc(usrRcvLen);
         memcpy(usrRcvMsg, message->payload, message->payloadLen);
         usrRcvMsg[message->payloadLen] = 0;
-//        MQTTClient_freeMessage(&message);
-//        MQTTClient_free(topicName);
         usrRcvSync.val = 1;
         pthread_cond_signal(&(usrRcvSync.var));
         pthread_mutex_unlock(&(usrRcvSync.mtx));
         return;
     }
 
-//    MQTTClient_freeMessage(&message);
-//    MQTTClient_free(topicName);
     return;
 }
 
@@ -179,14 +172,12 @@ static char CurrentWD[PATH_MAX + 1] ={0};
 static void mqttConnect(int reconnect)
 {
     int rc;
-//	MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
 
     IoT_Client_Connect_Params connectParams = iotClientConnectParamsDefault;
     IoT_Client_Init_Params mqttInitParams = iotClientInitParamsDefault;
 
     // Create connection
     if (CLIENT_STATE_INVALID == aws_iot_mqtt_get_client_state(&client)) {
-//        MQTTClient_create(&client, mqtt_address, ClientID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
 
         IOT_INFO("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
@@ -218,19 +209,10 @@ static void mqttConnect(int reconnect)
         client.networkStack.tlsConnectParams.pDeviceCertLocation = "";
 
     }
-    // if (NULL == client)
-    // {
-    //     DBG_Print("Failed to create mqtt client\n");
-    //     exit(-1);
-    // }
-
     if (aws_iot_mqtt_is_client_connected(&client)) return ;
     
-//    MQTTClient_setCallbacks(client, NULL, connlost, msgarrvd, NULL/*delivered*/);
 
     // Try to connect 
-//    conn_opts.keepAliveInterval = 20;
-//    conn_opts.cleansession = 1;
 	connectParams.keepAliveIntervalInSec = 600;
 	connectParams.isCleanSession = true;
 	connectParams.MQTTVersion = MQTT_3_1_1;
@@ -253,13 +235,13 @@ static void mqttConnect(int reconnect)
         }
     }
     if(reconnect) {
-            while (MQTT_CLIENT_NOT_IDLE_ERROR == (rc = aws_iot_mqtt_resubscribe(&client))) {
-                        printf("resubscribe  %d!!!\n", rc);
-                        usleep(200000);
-                    };
+        while (MQTT_CLIENT_NOT_IDLE_ERROR == (rc = aws_iot_mqtt_resubscribe(&client))) {
+            printf("resubscribe  %d!!!\n", rc);
+            usleep(200000);
+        };
         return;
     }
-//    aws_iot_mqtt_unsubscribe(&client, "#", 1);
+
     if(NULL != ServerTopic) {
         rc = aws_iot_mqtt_subscribe(&client, ServerTopic, strlen(ServerTopic), MQTT_QOS, msgarrvd, NULL);
         printf("###################  subscribed %s rc = %d\n", ServerTopic, rc);
@@ -345,8 +327,7 @@ static void connlost(AWS_IoT_Client *pClient, void *context)
 	}
     mqtt_connected = 0;
     DBG_Print("\nmqtt Connection lost\n");
-//    DBG_Print("     cause: %s\n", cause);
-    sleep(30);
+    sleep(10);
     //mqttConnect();
     pthread_mutex_lock(&(sync_msg.mtx));
     sync_msg.val |= CONNECTION_LOST;
@@ -376,19 +357,16 @@ void *mqttWorker(void *ctx)
             
             if(NULL != ClientTopic) {
                 aws_iot_mqtt_unsubscribe(&client, ClientTopic, strlen(ClientTopic));
-//                MQTTClient_unsubscribe(client, ClientTopic);
                 free(ClientTopic);
             }
             ClientTopic = usrRtopic;
             aws_iot_mqtt_subscribe(&client, ClientTopic, strlen(ClientTopic), MQTT_QOS, msgarrvd, NULL);
-//            MQTTClient_subscribe(client, ClientTopic, MQTT_QOS);
 
             params_usrSndMsg.payload = usrSndMsg;
             params_usrSndMsg.payloadLen = usrSndLen;
             while (MQTT_CLIENT_NOT_IDLE_ERROR ==
                     aws_iot_mqtt_publish(&client, usrStopic, strlen(usrStopic), &params_usrSndMsg))
                     usleep(200000);
-//            MQTTClient_publish(client, usrStopic, usrSndLen, usrSndMsg, MQTT_QOS, 0, NULL);
 
             free(usrStopic);
             usrStopic = NULL;
@@ -409,7 +387,6 @@ void *mqttWorker(void *ctx)
                     usleep(200000);
                     }
 printf("publish %.*s res = %d\n", (int)params_prvdSndMsg.payloadLen, (char *)params_prvdSndMsg.payload, res);
-//            MQTTClient_publish(client, prvdStopic, prvdSndLen, prvdSndMsg, MQTT_QOS, 0, NULL);
 
             free(prvdStopic);
             prvdStopic = NULL;
