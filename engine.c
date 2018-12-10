@@ -351,7 +351,7 @@ void* service_provider(void *arg)
 		}
 		DBG_Print("contract %s %s %d\n", sctx.contract.serviceUserAddress, sctx.contract.serviceProviderAddress, sctx.contract.profile.bit_mask[0]);
 
-		DBG_Print("UID_accept_channel %s -- %d\n", sbuffer, ssize);
+		DBG_Print("UID_accept_channel %s -- %zu\n", sbuffer, ssize);
 		uint8_t response[RESP_BUFFER];
 		size_t respsize = sizeof(response);
 		ret = MY_perform_request(sbuffer, ssize, response, &respsize, &sctx);
@@ -360,7 +360,7 @@ void* service_provider(void *arg)
 			error(0, 0, "UID_perform_request() return %d\n", ret);
 			continue;
 		}
-		DBG_Print("UID_perform_request %s - %d\n", response, respsize);
+		DBG_Print("UID_perform_request %s - %zu\n", response, respsize);
 
 		if(source == MSG_SOURCE_MQTT) mqttProviderSendMsg(sctx.contract.serviceUserAddress, response, respsize - 1);
 //		if(source == MSG_SOURCE_BLE)  ble_send(response,  respsize - 1);
@@ -481,7 +481,6 @@ void uniquidEngine( char *deviceName )
 	DBG_Print("Hello!!!!\n");
 	capDBp->validCacheEntries = 0; // should be initialized by the lib!!
 
-	program_name="engine";
 	loadConf();
 
 	led_setup();
@@ -489,7 +488,6 @@ void uniquidEngine( char *deviceName )
 
 	if (button_is_pressed()) clear_identity();
 
-	printf ("debug level %d\n",dbg_level);
 	printf ("MQTT broker address %s\n", mqtt_address);
 
 

@@ -18,27 +18,22 @@
 #ifndef __HELPERS_H__
 #define __HELPERS_H__
 
+#include <stdint.h>
+
+#define ENABLE_DBG_PRINT
 
 
-typedef int SOCKET;
-
-
-/** 
-\debug levels
-*/
-#define DBG_PRINT_ENABLE 1
-#define MONITOR_DATA_ENABLE 2
-#define OUTPUT_ON_FILE_ENABLE 4
-extern int dbg_level;
-extern char *program_name;
-
-void _DBG_Print( char *fmt, ... );
-
-#ifdef DEBUG
-	#define DBG_Print( ... ) _DBG_Print(__VA_ARGS__)
+#ifdef ENABLE_DBG_PRINT
+#define DBG_Print( ... ) \
+	{ \
+	printf("DBG:  %s L#%d ", __func__, __LINE__);  \
+	printf(__VA_ARGS__); \
+	}
 #else
 	#define DBG_Print( ... )
 #endif
+
+extern char *program_name;
 
 /* error - print a diagnostic and optionally exit */
 void error( int status, int err, char *fmt, ... );

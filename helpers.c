@@ -28,30 +28,15 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-#include <signal.h>
 #include <stdarg.h>
 #include <fcntl.h>
 #include <sys/socket.h>
-#include <sys/eventfd.h> 
-#include <pthread.h>
+#include <time.h>
 
 #include "helpers.h" 
 
 char *program_name;
-int dbg_level=7;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// print to standard error if enabled by dbg_level
-void _DBG_Print( char *fmt, ... )
-{
-	va_list ap;
-	
-	if( (dbg_level & DBG_PRINT_ENABLE) == 0 ) return;
-	va_start( ap, fmt );
-	fprintf( stderr, "%d:%s: ", getpid(), program_name );
-	vfprintf( stderr, fmt, ap );
-	va_end( ap );
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // error � print a diagnostic and optionally exit 
