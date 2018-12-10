@@ -114,26 +114,26 @@ void *updateCache(void *arg)
 	    int i;
 	    char buf[161];
 	    for (i = 0; i<cache->validCacheEntries;i++) {
-	        printf("[[ %s %s %s ]]\n",
+	        INFO_Print("[[ %s %s %s ]]\n",
 	            cache->contractsCache[i].serviceProviderAddress,
 	            cache->contractsCache[i].serviceUserAddress,
 	            tohex((uint8_t *)&(cache->contractsCache[i].profile), 80, buf));
 	    }
 	    pthread_mutex_lock(&(capDBp->in_use));  // lock the resource
 	    for (i = 0; i<capDBp->validCacheEntries;i++) {
-	        printf("[[ %s %s %s ]]\n",
+	        INFO_Print("[[ %s %s %s ]]\n",
 	            capDBp->contractsCache[i].serviceProviderAddress,
 	            capDBp->contractsCache[i].serviceUserAddress,
 	            tohex((uint8_t *)&(capDBp->contractsCache[i].profile), 80, buf));
 	    }
 	    pthread_mutex_unlock(&(capDBp->in_use));  // unlock the resource
 	    for (i = 0; i<cache->validClientEntries;i++) {
-	        printf("[[ %s %s <%s> ]]\n",
+	        INFO_Print("[[ %s %s <%s> ]]\n",
 	            cache->clientCache[i].serviceProviderAddress,
 	            cache->clientCache[i].serviceUserAddress,
 	            cache->clientCache[i].serviceProviderName);
 	    }
-        printf("\n");
+        INFO_Print("\n");
 
 		update_node_status(cache);
 		sleep(60);
@@ -171,7 +171,7 @@ void load_contracts_cache(void)
 		close(fd);
 	}
 	update_node_status(current);
-	printf("loaded %d valid contracts and %d valid providers from cache\n", current->validCacheEntries, current->validClientEntries);
+	INFO_Print("loaded %d valid contracts and %d valid providers from cache\n", current->validCacheEntries, current->validClientEntries);
 }
 
 
@@ -374,7 +374,7 @@ void* service_provider(void *arg)
 
 
 
-#define GOTO_ERROR( ... )  { printf( __VA_ARGS__ ); goto err; }
+#define GOTO_ERROR( ... )  { ERROR_Print( __VA_ARGS__ ); goto err; }
 
 static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
 	if (tok->type == JSMN_STRING && (int) strlen(s) == tok->end - tok->start &&
@@ -488,7 +488,7 @@ void uniquidEngine( char *deviceName )
 
 	if (button_is_pressed()) clear_identity();
 
-	printf ("MQTT broker address %s\n", mqtt_address);
+	INFO_Print ("MQTT broker address %s\n", mqtt_address);
 
 
 	UID_getLocalIdentity(NULL);

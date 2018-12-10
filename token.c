@@ -60,18 +60,12 @@ uint8_t *signedTimestamp(uint8_t *token, size_t tokenLen, char *provider)
     tokenLen -= 4;
 
     snprintf(timeString, sizeof(timeString), "%"  PRId64 "", UID_getTime());
-    printf("timeString --%s--\n",timeString);
 
     contract = UID_matchProvider(provider);
     if (contract)
     {
         UID_signMessage(timeString, &(contract->path), signature, sizeof(signature));
         serviceUserAddress = contract->serviceUserAddress;
-
-        //debug
-        char addr[42];
-        UID_getAddressAt(&(contract->path), addr, sizeof(addr));
-        printf("---> %s <---\n", addr);
     }
     int toprint = snprintf(token, tokenLen,
         "{\"userAddress\":\"%s\",\"timestamp\":%s,\"signature\":\"%s\"}",

@@ -91,8 +91,8 @@ void sendProviderMessage(uint8_t *msg, size_t len)
  */
 static void msgarrvd(AWS_IoT_Client *pClient, char *topicName, uint16_t topicLen, IoT_Publish_Message_Params *message, void *pData)
 {
-(void)topicLen;(void)pClient;(void)pData;
-printf("-- subscription calback fired %.*s\n", topicLen,topicName);
+    (void)topicLen;(void)pClient;(void)pData;
+
     if (0 == memcmp(topicName, ServerTopic, topicLen)) {
         // message for the provider
         pthread_mutex_lock(&(prvdRcvSync.mtx));
@@ -106,7 +106,6 @@ printf("-- subscription calback fired %.*s\n", topicLen,topicName);
         prvdRcvMsg = malloc(prvdRcvLen);
         memcpy(prvdRcvMsg, message->payload, message->payloadLen);
         prvdRcvMsg[message->payloadLen] = 0;
-        printf("msg -- %s --\n", prvdRcvMsg);
         prvdRcvSync.val = 1;
         pthread_cond_signal(&(prvdRcvSync.var));
         pthread_mutex_unlock(&(prvdRcvSync.mtx));
@@ -236,7 +235,7 @@ static void mqttConnect(int reconnect)
     }
     if(reconnect) {
         while (MQTT_CLIENT_NOT_IDLE_ERROR == (rc = aws_iot_mqtt_resubscribe(&client))) {
-            printf("resubscribe  %d!!!\n", rc);
+            DBG_Print("resubscribe  %d!!!\n", rc);
             usleep(200000);
         };
         return;
@@ -244,7 +243,7 @@ static void mqttConnect(int reconnect)
 
     if(NULL != ServerTopic) {
         rc = aws_iot_mqtt_subscribe(&client, ServerTopic, strlen(ServerTopic), MQTT_QOS, msgarrvd, NULL);
-        printf("###################  subscribed %s rc = %d\n", ServerTopic, rc);
+        INFO_Print("###################  subscribed %s rc = %d\n", ServerTopic, rc);
     }
     if(NULL != ClientTopic) {
         aws_iot_mqtt_subscribe(&client, ClientTopic, strlen(ClientTopic), MQTT_QOS, msgarrvd, NULL);
@@ -345,6 +344,7 @@ void *mqttWorker(void *ctx)
     ClientID = ctx;
     ServerTopic = ctx;
     mqttConnect(0);
+    int res;
 
     IoT_Publish_Message_Params params_usrSndMsg = {.qos = MQTT_QOS, .isRetained = 0};
     IoT_Publish_Message_Params params_prvdSndMsg = {.qos = MQTT_QOS, .isRetained = 0};
@@ -365,8 +365,10 @@ void *mqttWorker(void *ctx)
             params_usrSndMsg.payload = usrSndMsg;
             params_usrSndMsg.payloadLen = usrSndLen;
             while (MQTT_CLIENT_NOT_IDLE_ERROR ==
-                    aws_iot_mqtt_publish(&client, usrStopic, strlen(usrStopic), &params_usrSndMsg))
-                    usleep(200000);
+                    (res = aws_iot_mqtt_publish(&client, usrStopic, strlen(usrStopic), &params_usrSndMsg))) {
+                        DBG_Print("publish state = %d\n", res);
+                        usleep(200000);
+                    }
 
             free(usrStopic);
             usrStopic = NULL;
@@ -380,13 +382,11 @@ void *mqttWorker(void *ctx)
             
             params_prvdSndMsg.payload = prvdSndMsg;
             params_prvdSndMsg.payloadLen = prvdSndLen;
-            int res;
             while (MQTT_CLIENT_NOT_IDLE_ERROR ==
                     (res = aws_iot_mqtt_publish(&client, prvdStopic, strlen(prvdStopic), &params_prvdSndMsg))) {
-                    printf("publish state = %d\n", res);
-                    usleep(200000);
+                        DBG_Print("publish state = %d\n", res);
+                        usleep(200000);
                     }
-printf("publish %.*s res = %d\n", (int)params_prvdSndMsg.payloadLen, (char *)params_prvdSndMsg.payload, res);
 
             free(prvdStopic);
             prvdStopic = NULL;
@@ -405,7 +405,7 @@ printf("publish %.*s res = %d\n", (int)params_prvdSndMsg.payloadLen, (char *)par
         pthread_mutex_unlock(&(sync_msg.mtx));
         int res = aws_iot_mqtt_yield(&client, 200);
         if (SUCCESS != res) {
-            printf("aws_iot_mqtt_yield() return %d\n", res);
+            DBG_Print("aws_iot_mqtt_yield() return %d\n", res);
             usleep(300000);
         }
     }

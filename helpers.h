@@ -21,16 +21,37 @@
 #include <stdint.h>
 
 #define ENABLE_DBG_PRINT
+#define ENABLE_ERROR_PRINT
+#define ENABLE_INFO_PRINT
 
 
 #ifdef ENABLE_DBG_PRINT
 #define DBG_Print( ... ) \
 	{ \
-	printf("DBG:  %s L#%d ", __func__, __LINE__);  \
+	printf("DBG:   %s L#%d ", __func__, __LINE__);  \
 	printf(__VA_ARGS__); \
 	}
 #else
 	#define DBG_Print( ... )
+#endif
+
+#ifdef ENABLE_ERROR_PRINT
+#define ERROR_Print( ... ) \
+	{ \
+	printf("ERROR: %s L#%d ", __func__, __LINE__);  \
+	printf(__VA_ARGS__); \
+	}
+#else
+	#define ERROR_Print( ... )
+#endif
+
+#ifdef ENABLE_INFO_PRINT
+#define INFO_Print( ... ) \
+	{ \
+	printf(__VA_ARGS__); \
+	}
+#else
+	#define INFO_Print( ... )
 #endif
 
 extern char *program_name;
