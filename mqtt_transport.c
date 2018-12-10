@@ -171,10 +171,10 @@ int mqttProviderWaitMsg(uint8_t **msg, size_t *len)
 
 static void connlost(AWS_IoT_Client *pClient, void *data);
 
-static char rootCA[PATH_MAX + 1];
-static char clientCRT[PATH_MAX + 1];
-static char clientKey[PATH_MAX + 1];
-static char CurrentWD[PATH_MAX + 1];
+static char rootCA[PATH_MAX + 1] = {0};
+static char clientCRT[PATH_MAX + 1] ={0};
+static char clientKey[PATH_MAX + 1] ={0};
+static char CurrentWD[PATH_MAX + 1] ={0};
 
 static void mqttConnect(int reconnect)
 {
@@ -192,8 +192,6 @@ static void mqttConnect(int reconnect)
 
         getcwd(CurrentWD, sizeof(CurrentWD));
         snprintf(rootCA, PATH_MAX + 1, "%s/%s/%s", CurrentWD, certDirectory, AWS_IOT_ROOT_CA_FILENAME);
-        snprintf(clientCRT, PATH_MAX + 1, "%s/%s/%s", CurrentWD, certDirectory, AWS_IOT_CERTIFICATE_FILENAME);
-        snprintf(clientKey, PATH_MAX + 1, "%s/%s/%s", CurrentWD, certDirectory, AWS_IOT_PRIVATE_KEY_FILENAME);
 
         IOT_DEBUG("rootCA %s", rootCA);
         IOT_DEBUG("clientCRT %s", clientCRT);
