@@ -413,14 +413,13 @@ void loadConf(void)
     /* Loop over all keys of the root object */
     for (i = 1; i < r; i++) {
         int size =  t[i+1].end-t[i+1].start;
-        if (jsoneq(confjson, &t[i], "mqttUrl") == 0) {
+        if (jsoneq(confjson, &t[i], "mqttsUrl") == 0) {
 			int start = t[i+1].start;
 			int j;
 			if (strncmp(confjson + start, "tcp://", 6) == 0) start +=6;
 			for (j=start; j<t[i+1].end; j++) if (confjson[j] == ':') break;
             mqtt_address = strndup(confjson + start, j-start);
-			// use default port!!!!
-			//sscanf(confjson + 1 + j, "%" SCNd32, &mqtt_port);
+			sscanf(confjson + 1 + j, "%" SCNd32, &mqtt_port);
         }
         if (jsoneq(confjson, &t[i], "mqttTopic") == 0) {
             pAnnounceTopic = strndup(confjson + t[i+1].start, size);
@@ -440,11 +439,13 @@ void loadConf(void)
 			if (strncmp(confjson + t[i+1].start, "ltc-mainnet", size) == 0)
 				UID_pApplianceURL = LTC_MAINNET_APPLIANCE;
         }
-        if (jsoneq(confjson, &t[i], "proxyAddress") == 0) {
-            proxyAddress = strndup(confjson + t[i+1].start, size);
-        }
-        if (jsoneq(confjson, &t[i], "proxyPort") == 0) {
-			sscanf(confjson + t[i+1].start, "%" SCNd32, &proxyPort);
+        if (jsoneq(confjson, &t[i], "proxyUrl") == 0) {
+			int start = t[i+1].start;
+			int j;
+			if (strncmp(confjson + start, "tcp://", 6) == 0) start +=6;
+			for (j=start; j<t[i+1].end; j++) if (confjson[j] == ':') break;
+            proxyAddress = strndup(confjson + start, j-start);
+			sscanf(confjson + 1 + j, "%" SCNd32, &proxyPort);
         }
     }
 
