@@ -212,11 +212,11 @@ static void mqttConnect(int reconnect)
     
 
     // Try to connect 
-	connectParams.keepAliveIntervalInSec = 600;
+	connectParams.keepAliveIntervalInSec = 60;
 	connectParams.isCleanSession = true;
 	connectParams.MQTTVersion = MQTT_3_1_1;
-	connectParams.pClientID = AWS_IOT_MQTT_CLIENT_ID;
-	connectParams.clientIDLen = (uint16_t) strlen(AWS_IOT_MQTT_CLIENT_ID);
+	connectParams.pClientID = ClientID;
+	connectParams.clientIDLen = (uint16_t) strlen(ClientID);
 	connectParams.isWillMsgPresent = false;
     for(;;)
     {
