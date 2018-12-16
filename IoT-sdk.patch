@@ -128,7 +128,7 @@ index 8af3dd9..0b2dde5 100644
  #define DISABLE_METRICS false ///< Disable the collection of metrics by setting this to true
  
 diff --git a/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c b/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c
-index ce7a28f..9ba75a1 100644
+index ce7a28f..3bb0c2c 100644
 --- a/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c
 +++ b/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c
 @@ -32,6 +32,9 @@
@@ -194,16 +194,7 @@ index ce7a28f..9ba75a1 100644
  	/*
  	 * Enable Auto Reconnect functionality. Minimum and Maximum time of Exponential backoff are set in aws_iot_config.h
  	 *  #AWS_IOT_MQTT_MIN_RECONNECT_WAIT_INTERVAL
-@@ -222,13 +236,14 @@ int main(int argc, char **argv) {
- 		infinitePublishFlag = false;
- 	}
- 
--	while((NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc)
--		  && (publishCount > 0 || infinitePublishFlag)) {
-+	while(/*(NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc)
-+		  &&*/ (publishCount > 0 || infinitePublishFlag)) {
- 
- 		//Max time the yield function will wait for read messages
+@@ -229,6 +243,7 @@ int main(int argc, char **argv) {
  		rc = aws_iot_mqtt_yield(&client, 100);
  		if(NETWORK_ATTEMPTING_RECONNECT == rc) {
  			// If the client is attempting to reconnect we will skip the rest of the loop.
@@ -211,3 +202,25 @@ index ce7a28f..9ba75a1 100644
  			continue;
  		}
  
+@@ -236,7 +251,7 @@ int main(int argc, char **argv) {
+ 		sleep(1);
+ 		sprintf(cPayload, "%s : %d ", "hello from SDK QOS0", i++);
+ 		paramsQOS0.payloadLen = strlen(cPayload);
+-		rc = aws_iot_mqtt_publish(&client, "sdkTest/sub", 11, &paramsQOS0);
++		int rc1 = aws_iot_mqtt_publish(&client, "sdkTest/sub", 11, &paramsQOS0);
+ 		if(publishCount > 0) {
+ 			publishCount--;
+ 		}
+@@ -247,10 +262,10 @@ int main(int argc, char **argv) {
+ 
+ 		sprintf(cPayload, "%s : %d ", "hello from SDK QOS1", i++);
+ 		paramsQOS1.payloadLen = strlen(cPayload);
+-		rc = aws_iot_mqtt_publish(&client, "sdkTest/sub", 11, &paramsQOS1);
++		rc1 = aws_iot_mqtt_publish(&client, "sdkTest/sub", 11, &paramsQOS1);
+ 		if (rc == MQTT_REQUEST_TIMEOUT_ERROR) {
+ 			IOT_WARN("QOS1 publish ack not received.\n");
+-			rc = SUCCESS;
++			rc1 = SUCCESS;
+ 		}
+ 		if(publishCount > 0) {
+ 			publishCount--;
