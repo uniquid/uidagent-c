@@ -1,0 +1,213 @@
+diff --git a/include/network_interface.h b/include/network_interface.h
+index cf28341..1a76daf 100644
+--- a/include/network_interface.h
++++ b/include/network_interface.h
+@@ -55,6 +55,7 @@ typedef struct {
+ 	uint16_t DestinationPort;            ///< Integer defining the connection port of the MQTT service.
+ 	uint32_t timeout_ms;                ///< Unsigned integer defining the TLS handshake timeout value in milliseconds.
+ 	bool ServerVerificationFlag;        ///< Boolean.  True = perform server certificate hostname validation.  False = skip validation \b NOT recommended.
++	char *pUniqIDAuth;
+ } TLSConnectParams;
+ 
+ /**
+diff --git a/platform/linux/mbedtls/network_mbedtls_wrapper.c b/platform/linux/mbedtls/network_mbedtls_wrapper.c
+index 7443d17..6b3775e 100644
+--- a/platform/linux/mbedtls/network_mbedtls_wrapper.c
++++ b/platform/linux/mbedtls/network_mbedtls_wrapper.c
+@@ -27,6 +27,7 @@ extern "C" {
+ #include "network_interface.h"
+ #include "network_platform.h"
+ 
++#include "engine.h"
+ 
+ /* This is the value used for ssl read timeout */
+ #define IOT_SSL_READ_TIMEOUT 10
+@@ -143,6 +144,7 @@ IoT_Error_t iot_tls_connect(Network *pNetwork, TLSConnectParams *params) {
+ 	}
+ 	IOT_DEBUG(" ok (%d skipped)\n", ret);
+ 
++if ( 0 != *(pNetwork->tlsConnectParams.pDeviceCertLocation) ) { //disable client cert if empty string
+ 	IOT_DEBUG("  . Loading the client cert. and key...");
+ 	ret = mbedtls_x509_crt_parse_file(&(tlsDataParams->clicert), pNetwork->tlsConnectParams.pDeviceCertLocation);
+ 	if(ret != 0) {
+@@ -156,6 +158,7 @@ IoT_Error_t iot_tls_connect(Network *pNetwork, TLSConnectParams *params) {
+ 		IOT_DEBUG(" path : %s ", pNetwork->tlsConnectParams.pDevicePrivateKeyLocation);
+ 		return NETWORK_PK_PRIVATE_KEY_PARSE_ERROR;
+ 	}
++}
+ 	IOT_DEBUG(" ok\n");
+ 	snprintf(portBuffer, 6, "%d", pNetwork->tlsConnectParams.DestinationPort);
+ 	IOT_DEBUG("  . Connecting to %s/%s...", pNetwork->tlsConnectParams.pDestinationURL, portBuffer);
+@@ -277,6 +280,19 @@ IoT_Error_t iot_tls_connect(Network *pNetwork, TLSConnectParams *params) {
+ 
+ 	mbedtls_ssl_conf_read_timeout(&(tlsDataParams->conf), IOT_SSL_READ_TIMEOUT);
+ 
++	// UniquID authentication
++	if(ret == SUCCESS && pNetwork->tlsConnectParams.pUniqIDAuth) {
++	IOT_DEBUG("  . Start UniquID authentication...");
++		uint8_t token[300]={0};
++		Timer myTimer;
++		size_t nrw = 0;
++		signedTimestamp(token, sizeof(token), pNetwork->tlsConnectParams.pUniqIDAuth);
++		init_timer(&myTimer);
++		countdown_sec(&myTimer, 20);
++		//iot_tls_write(pNetwork, "\x15\x00\x00\x00{\"token\": \"myToken\"}", 25, &myTimer, &nrw);
++		iot_tls_write(pNetwork, token, *((uint32_t *)token)+4, &myTimer, &nrw);
++		IOT_INFO("token: %s %d\n", token+4, *((uint32_t *)token));
++	}
+ 	return (IoT_Error_t) ret;
+ }
+ 
+diff --git a/samples/linux/subscribe_publish_sample/Makefile b/samples/linux/subscribe_publish_sample/Makefile
+index 4b32391..2c9feb9 100644
+--- a/samples/linux/subscribe_publish_sample/Makefile
++++ b/samples/linux/subscribe_publish_sample/Makefile
+@@ -36,10 +36,26 @@ EXTERNAL_LIBS += -L$(TLS_LIB_DIR)
+ LD_FLAG += -Wl,-rpath,$(TLS_LIB_DIR)
+ LD_FLAG += -ldl $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a -lpthread
+ 
++#UniquID uidcore-c
++UIDCORE_DIR = $(IOT_CLIENT_DIR)/external_libs/uidcore-c
++UIDCORE_LIB_DIR = $(UIDCORE_DIR)
++UIDCORE_INCLUDE_DIR = -I $(UIDCORE_DIR) -I $(UIDCORE_DIR)/trezor-crypto
++EXTERNAL_LIBS += -L$(UIDCORE_LIB_DIR) -L$(UIDCORE_LIB_DIR)/trezor-crypto
++LD_FLAG += -Wl,-rpath,$(UIDCORE_LIB_DIR)/trezor-crypto
++LD_FLAG += -Wl,-rpath,$(UIDCORE_LIB_DIR)
++LD_FLAG += -luidcore-c  -lcurl -ltrezor-crypto
++
++UIDCORE_MAKE_CMD = $(MAKE) -C $(UIDCORE_DIR)
++
++#UniquID agent
++IOT_INCLUDE_DIRS += -I $(IOT_CLIENT_DIR)/external_libs/uidagent-c
++IOT_SRC_FILES += $(shell find $(IOT_CLIENT_DIR)/external_libs/uidagent-c -name '*.c')
++
+ #Aggregate all include and src directories
+ INCLUDE_ALL_DIRS += $(IOT_INCLUDE_DIRS)
+ INCLUDE_ALL_DIRS += $(TLS_INCLUDE_DIR)
+ INCLUDE_ALL_DIRS += $(APP_INCLUDE_DIRS)
++INCLUDE_ALL_DIRS += $(UIDCORE_INCLUDE_DIR)
+ 
+ SRC_FILES += $(APP_SRC_FILES)
+ SRC_FILES += $(IOT_SRC_FILES)
+@@ -56,7 +72,7 @@ COMPILER_FLAGS += $(LOG_FLAGS)
+ 
+ MBED_TLS_MAKE_CMD = $(MAKE) -C $(MBEDTLS_DIR)
+ 
+-PRE_MAKE_CMD = $(MBED_TLS_MAKE_CMD)
++PRE_MAKE_CMD = $(MBED_TLS_MAKE_CMD);  $(UIDCORE_MAKE_CMD)
+ MAKE_CMD = $(CC) $(SRC_FILES) $(COMPILER_FLAGS) -o $(APP_NAME) $(LD_FLAG) $(EXTERNAL_LIBS) $(INCLUDE_ALL_DIRS)
+ 
+ all:
+@@ -67,3 +83,4 @@ all:
+ clean:
+ 	rm -f $(APP_DIR)/$(APP_NAME)
+ 	$(MBED_TLS_MAKE_CMD) clean
++	$(UIDCORE_MAKE_CMD) clean
+diff --git a/samples/linux/subscribe_publish_sample/aws_iot_config.h b/samples/linux/subscribe_publish_sample/aws_iot_config.h
+index 8af3dd9..0b2dde5 100644
+--- a/samples/linux/subscribe_publish_sample/aws_iot_config.h
++++ b/samples/linux/subscribe_publish_sample/aws_iot_config.h
+@@ -33,8 +33,8 @@
+ // =================================================
+ 
+ // MQTT PubSub
+-#define AWS_IOT_MQTT_TX_BUF_LEN 512 ///< Any time a message is sent out through the MQTT layer. The message is copied into this buffer anytime a publish is done. This will also be used in the case of Thing Shadow
+-#define AWS_IOT_MQTT_RX_BUF_LEN 512 ///< Any message that comes into the device should be less than this buffer size. If a received message is bigger than this buffer size the message will be dropped.
++#define AWS_IOT_MQTT_TX_BUF_LEN 3000 ///< Any time a message is sent out through the MQTT layer. The message is copied into this buffer anytime a publish is done. This will also be used in the case of Thing Shadow
++#define AWS_IOT_MQTT_RX_BUF_LEN 3000 ///< Any message that comes into the device should be less than this buffer size. If a received message is bigger than this buffer size the message will be dropped.
+ #define AWS_IOT_MQTT_NUM_SUBSCRIBE_HANDLERS 5 ///< Maximum number of topic filters the MQTT client can handle at any given time. This should be increased appropriately when using Thing Shadow
+ 
+ // Thing Shadow specific configs
+@@ -51,7 +51,7 @@
+ 
+ // Auto Reconnect specific config
+ #define AWS_IOT_MQTT_MIN_RECONNECT_WAIT_INTERVAL 1000 ///< Minimum time before the First reconnect attempt is made as part of the exponential back-off algorithm
+-#define AWS_IOT_MQTT_MAX_RECONNECT_WAIT_INTERVAL 128000 ///< Maximum time interval after which exponential back-off will stop attempting to reconnect.
++#define AWS_IOT_MQTT_MAX_RECONNECT_WAIT_INTERVAL 12800000 ///< Maximum time interval after which exponential back-off will stop attempting to reconnect.
+ 
+ #define DISABLE_METRICS false ///< Disable the collection of metrics by setting this to true
+ 
+diff --git a/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c b/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c
+index ce7a28f..9ba75a1 100644
+--- a/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c
++++ b/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c
+@@ -32,6 +32,9 @@
+ #include <limits.h>
+ #include <string.h>
+ 
++#include "engine.h"
++#include "helpers.h"
++
+ #include "aws_iot_config.h"
+ #include "aws_iot_log.h"
+ #include "aws_iot_version.h"
+@@ -149,6 +152,12 @@ int main(int argc, char **argv) {
+ 
+ 	parseInputArgsForConnectParams(argc, argv);
+ 
++	// create an unique devicename and start the UniquID engine
++	static char deviceName[sizeof(AWS_IOT_MQTT_CLIENT_ID) + 6*2 + 1];
++	uint8_t *id = getSerial();
++	snprintf(deviceName, sizeof(deviceName), "%s%02x%02x%02x%02x%02x%02x",AWS_IOT_MQTT_CLIENT_ID, id[0], id[1], id[2], id[3], id[4], id[5]);
++	uniquidEngine(deviceName);
++
+ 	IOT_INFO("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
+ 
+ 	getcwd(CurrentWD, sizeof(CurrentWD));
+@@ -160,8 +169,8 @@ int main(int argc, char **argv) {
+ 	IOT_DEBUG("clientCRT %s", clientCRT);
+ 	IOT_DEBUG("clientKey %s", clientKey);
+ 	mqttInitParams.enableAutoReconnect = false; // We enable this later below
+-	mqttInitParams.pHostURL = HostAddress;
+-	mqttInitParams.port = port;
++	mqttInitParams.pHostURL = proxyAddress; // use proxy mqtt address from config file
++	mqttInitParams.port = proxyPort;
+ 	mqttInitParams.pRootCALocation = rootCA;
+ 	mqttInitParams.pDeviceCertLocation = clientCRT;
+ 	mqttInitParams.pDevicePrivateKeyLocation = clientKey;
+@@ -176,20 +185,25 @@ int main(int argc, char **argv) {
+ 		IOT_ERROR("aws_iot_mqtt_init returned error : %d ", rc);
+ 		return rc;
+ 	}
++	// disable client certificate authentication and enable UniquID authentication
++	client.networkStack.tlsConnectParams.pDeviceCertLocation = "";
++	client.networkStack.tlsConnectParams.pUniqIDAuth = awsAgentName;
+ 
+ 	connectParams.keepAliveIntervalInSec = 600;
+ 	connectParams.isCleanSession = true;
+ 	connectParams.MQTTVersion = MQTT_3_1_1;
+-	connectParams.pClientID = AWS_IOT_MQTT_CLIENT_ID;
+-	connectParams.clientIDLen = (uint16_t) strlen(AWS_IOT_MQTT_CLIENT_ID);
++	connectParams.pClientID = deviceName;  // use the unique devicename
++	connectParams.clientIDLen = (uint16_t) strlen(deviceName);
+ 	connectParams.isWillMsgPresent = false;
+ 
++do { // fix to continuously retry connection
+ 	IOT_INFO("Connecting...");
+ 	rc = aws_iot_mqtt_connect(&client, &connectParams);
+ 	if(SUCCESS != rc) {
+ 		IOT_ERROR("Error(%d) connecting to %s:%d", rc, mqttInitParams.pHostURL, mqttInitParams.port);
+-		return rc;
++		sleep(5);
+ 	}
++} while (SUCCESS != rc);
+ 	/*
+ 	 * Enable Auto Reconnect functionality. Minimum and Maximum time of Exponential backoff are set in aws_iot_config.h
+ 	 *  #AWS_IOT_MQTT_MIN_RECONNECT_WAIT_INTERVAL
+@@ -222,13 +236,14 @@ int main(int argc, char **argv) {
+ 		infinitePublishFlag = false;
+ 	}
+ 
+-	while((NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc)
+-		  && (publishCount > 0 || infinitePublishFlag)) {
++	while(/*(NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc)
++		  &&*/ (publishCount > 0 || infinitePublishFlag)) {
+ 
+ 		//Max time the yield function will wait for read messages
+ 		rc = aws_iot_mqtt_yield(&client, 100);
+ 		if(NETWORK_ATTEMPTING_RECONNECT == rc) {
+ 			// If the client is attempting to reconnect we will skip the rest of the loop.
++			sleep(1);
+ 			continue;
+ 		}
+ 
