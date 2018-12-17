@@ -218,21 +218,13 @@ static void mqttConnect(int reconnect)
 	connectParams.pClientID = ClientID;
 	connectParams.clientIDLen = (uint16_t) strlen(ClientID);
 	connectParams.isWillMsgPresent = false;
-    for(;;)
-    {
-        if ((rc = aws_iot_mqtt_connect(&client, &connectParams)) != SUCCESS)
-        {
-            DBG_Print("mqtt Failed to connect, return code %d\n", rc);
-            sleep(10);
-        }
-        else
-        {
-            mqtt_connected = 1;
-            usleep(200000);
-            DBG_Print("mqtt broker Connected!!\n");
-            break;
-        }
+    while ((rc = aws_iot_mqtt_connect(&client, &connectParams)) != SUCCESS) {
+        DBG_Print("mqtt Failed to connect, return code %d\n", rc);
+        sleep(10);
     }
+    mqtt_connected = 1;
+    DBG_Print("mqtt broker Connected!!\n");
+
     if(reconnect) {
         while (MQTT_CLIENT_NOT_IDLE_ERROR == (rc = aws_iot_mqtt_resubscribe(&client))) {
             DBG_Print("resubscribe  %d!!!\n", rc);
