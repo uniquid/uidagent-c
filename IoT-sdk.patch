@@ -128,7 +128,7 @@ index 8af3dd9..0b2dde5 100644
  #define DISABLE_METRICS false ///< Disable the collection of metrics by setting this to true
  
 diff --git a/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c b/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c
-index ce7a28f..3bb0c2c 100644
+index ce7a28f..5779f3d 100644
 --- a/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c
 +++ b/samples/linux/subscribe_publish_sample/subscribe_publish_sample.c
 @@ -32,6 +32,9 @@
@@ -216,8 +216,9 @@ index ce7a28f..3bb0c2c 100644
  		sprintf(cPayload, "%s : %d ", "hello from SDK QOS1", i++);
  		paramsQOS1.payloadLen = strlen(cPayload);
 -		rc = aws_iot_mqtt_publish(&client, "sdkTest/sub", 11, &paramsQOS1);
+-		if (rc == MQTT_REQUEST_TIMEOUT_ERROR) {
 +		rc1 = aws_iot_mqtt_publish(&client, "sdkTest/sub", 11, &paramsQOS1);
- 		if (rc == MQTT_REQUEST_TIMEOUT_ERROR) {
++		if (rc1 == MQTT_REQUEST_TIMEOUT_ERROR) {
  			IOT_WARN("QOS1 publish ack not received.\n");
 -			rc = SUCCESS;
 +			rc1 = SUCCESS;
