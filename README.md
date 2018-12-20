@@ -34,3 +34,6 @@ the file must be named **rootCA.crt**:<br>
 ``cp path-to/aws_device_cfg.json aws_device_cfg.json``
 - run the sample<br>
 ``./subscribe_publish_sample``
+
+** configuration can be loaded also from **AWS_AGENT_CONFIG** environment variable:<br>
+``export AWS_AGENT_CONFIG=$(cat path-to/virtual_device_cfg.json)``

@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 #define CONF_FILE "aws_device_cfg.json"
+#define CONFIG_ENV_VAR "AWS_AGENT_CONFIG"
 #define LTC_TESTNET_APPLIANCE "http://40.115.38.96:3001/insight-lite-api"
 #define LTC_REGTEST_APPLIANCE "http://40.115.38.96:3001/insight-lite-api"
 #define LTC_MAINNET_APPLIANCE "http://40.115.38.96:3001/insight-lite-api"

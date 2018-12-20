@@ -33,6 +33,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 // #include "demo.h"
 // #include "led.h"
@@ -388,20 +389,26 @@ char *awsAgentName = NULL;
 char *proxyAddress = DEFAULT_PROXY_ADDRESS;
 uint32_t proxyPort = DEFAULT_PROXY_PORT;
 
-void loadConf(void)
+static bool loadConf(void)
 {
     int confFile = 0;
     char *confjson = NULL;
     int i, r;
     jsmn_parser p;
+	bool ret = false;
     jsmntok_t t[128]; /* We expect no more than 128 tokens */
 
     struct stat st;
 
-    if (0 != stat(CONF_FILE, &st)) GOTO_ERROR("Error accessing confFile %s\n", CONF_FILE);
-    if ( NULL == (confjson = malloc(st.st_size))) GOTO_ERROR("malloc() failed\n");
-    if ((confFile = open(CONF_FILE, O_RDONLY)) < 0) GOTO_ERROR("Error opening confFile %s\n", CONF_FILE);
-    if (st.st_size != read(confFile, confjson, st.st_size)) GOTO_ERROR("confFile read() error\n");
+    if (0 == stat(CONF_FILE, &st)) { // Config file exists
+		if ( NULL == (confjson = malloc(st.st_size))) GOTO_ERROR("malloc() failed\n");
+		if ((confFile = open(CONF_FILE, O_RDONLY)) < 0) GOTO_ERROR("Error opening confFile %s\n", CONF_FILE);
+		if (st.st_size != read(confFile, confjson, st.st_size)) GOTO_ERROR("confFile read() error\n");
+	}
+	else { // load configuration from environment
+		DBG_Print("Config file %s not found. Reading configuration from env\n", CONF_FILE);
+		if ( NULL == (confjson = getenv(CONFIG_ENV_VAR))) GOTO_ERROR("Env var %s not exists\n", CONFIG_ENV_VAR);
+	}
 
     jsmn_init(&p);
     r = jsmn_parse(&p, confjson, strlen(confjson), t, sizeof(t)/sizeof(t[0]));
@@ -448,9 +455,10 @@ void loadConf(void)
 			sscanf(confjson + 1 + j, "%" SCNd32, &proxyPort);
         }
     }
-
+	ret = true;
 err:
      if (confFile > 0) close(confFile);
+	 return ret;
 }
 
 const char *linktrezor(void)
@@ -482,7 +490,10 @@ void uniquidEngine( char *deviceName )
 	DBG_Print("Hello!!!!\n");
 	capDBp->validCacheEntries = 0; // should be initialized by the lib!!
 
-	loadConf();
+	if (!loadConf()) {
+		ERROR_Print("Cannot load the configuration\n");
+		exit(1);
+	};
 
 	led_setup();
 	button_setup();
