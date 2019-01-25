@@ -323,12 +323,12 @@ void* service_provider(void *arg)
 	{
 		uint8_t *msg;
 		size_t size;
-		char *sourceS = "";
+		//char *sourceS = "";
 
 		int source = mqttProviderWaitMsg(&msg, &size);
 
-		if(source == MSG_SOURCE_MQTT) sourceS = "MQTT";
-		if(source == MSG_SOURCE_BLE)  sourceS = "BLE ";
+		//if(source == MSG_SOURCE_MQTT) sourceS = "MQTT";
+		//if(source == MSG_SOURCE_BLE)  sourceS = "BLE ";
 
 #ifdef MANAGE_CAPABILITY
 		if(decodeCapability(msg)) {

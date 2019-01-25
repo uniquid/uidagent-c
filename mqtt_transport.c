@@ -332,7 +332,7 @@ static void connlost(AWS_IoT_Client *pClient, void *context)
  */
 void *mqttWorker(void *ctx)
 {
-	pthread_t thr;
+	//pthread_t thr;
     ClientID = ctx;
     ServerTopic = ctx;
     mqttConnect(0);
@@ -395,7 +395,7 @@ void *mqttWorker(void *ctx)
         }
         //pthread_cond_wait(&(sync_msg.var), &(sync_msg.mtx));
         pthread_mutex_unlock(&(sync_msg.mtx));
-        int res = aws_iot_mqtt_yield(&client, 200);
+        res = aws_iot_mqtt_yield(&client, 200);
         if (SUCCESS != res) {
             DBG_Print("aws_iot_mqtt_yield() return %d\n", res);
             usleep(300000);
