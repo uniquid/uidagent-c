@@ -59,9 +59,18 @@ index 7443d17..6b3775e 100644
  }
  
 diff --git a/samples/linux/subscribe_publish_sample/Makefile b/samples/linux/subscribe_publish_sample/Makefile
-index 4b32391..2c9feb9 100644
+index 4b32391..db4d190 100644
 --- a/samples/linux/subscribe_publish_sample/Makefile
 +++ b/samples/linux/subscribe_publish_sample/Makefile
+@@ -2,7 +2,7 @@
+ .prevent_execution:
+ 	exit 0
+ 
+-CC = gcc
++unexport CFLAGS
+ 
+ #remove @ for no make command prints
+ DEBUG = @
 @@ -36,10 +36,26 @@ EXTERNAL_LIBS += -L$(TLS_LIB_DIR)
  LD_FLAG += -Wl,-rpath,$(TLS_LIB_DIR)
  LD_FLAG += -ldl $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a -lpthread

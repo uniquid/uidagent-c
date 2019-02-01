@@ -67,7 +67,7 @@ uint8_t *signedTimestamp(uint8_t *token, size_t tokenLen, char *provider)
         UID_signMessage(timeString, &(contract->path), signature, sizeof(signature));
         serviceUserAddress = contract->serviceUserAddress;
     }
-    int toprint = snprintf(token, tokenLen,
+    uint toprint = snprintf((char *)token, tokenLen,
         "{\"userAddress\":\"%s\",\"timestamp\":%s,\"signature\":\"%s\"}",
             serviceUserAddress, timeString, signature);
     *header = (toprint < tokenLen) ? toprint + 1 : tokenLen ;
