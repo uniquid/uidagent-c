@@ -398,9 +398,10 @@ static bool loadConf(void)
     struct stat st;
 
     if (0 == stat(CONF_FILE, &st)) { // Config file exists
-		if ( NULL == (confjson = malloc(st.st_size))) GOTO_ERROR("malloc() failed\n");
+		if ( NULL == (confjson = malloc(st.st_size+1))) GOTO_ERROR("malloc() failed\n");
 		if ((confFile = open(CONF_FILE, O_RDONLY)) < 0) GOTO_ERROR("Error opening confFile %s\n", CONF_FILE);
 		if (st.st_size != read(confFile, confjson, st.st_size)) GOTO_ERROR("confFile read() error\n");
+		confjson[st.st_size] = 0;
 	}
 	else { // load configuration from environment
 		DBG_Print("Config file %s not found. Reading configuration from env\n", CONF_FILE);
