@@ -181,7 +181,6 @@ void user_33(char *param, char *result, size_t size)
 	snprintf(result, size, "you requested: <%s>", param);
 }
 
-BTC_Address sender;
 int method;
 int RPCerror;
 
@@ -197,13 +196,11 @@ int MY_perform_request(uint8_t *buffer, size_t size, uint8_t *response, size_t *
 	char params[PARAM_BUFFER];
     char result[RESULT_BUFFER] = {0}; // must find a better way to allocate the buffer!!!
 
-	strncpy(sender, "Unknown", sizeof(sender));
 	method = -1;
 	RPCerror = 0;
 	// parse the request
-	ret = UID_parseReqMsg(buffer, size, sender, sizeof(sender), &method, params, sizeof(params), &sID);
+	ret = UID_parseReqMsg(buffer, size, &method, params, sizeof(params), &sID);
 	if (ret) return ret;
-	if (strcmp(sender,channel_ctx->contract.serviceUserAddress)) return UID_MSG_INVALID_SENDER;
 
 	// check the contract for permission
     if(UID_checkPermission(method, channel_ctx->contract.profile)) {
@@ -231,7 +228,7 @@ int MY_perform_request(uint8_t *buffer, size_t size, uint8_t *response, size_t *
 
 
 	// format the response message
-	ret = UID_formatRespMsg(channel_ctx->contract.serviceProviderAddress, result, RPCerror, sID, response, rsize);
+	ret = UID_formatRespMsg(&channel_ctx->contract.path, result, RPCerror, sID, response, rsize);
 	if (ret) return ret;
 
     return UID_MSG_OK;
