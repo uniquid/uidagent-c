@@ -17,7 +17,7 @@
  * @file mqtt_transport.h
  *
  * worker to manage the MQTT transport
- * 
+ *
  */
 
 /* include includes */
@@ -203,21 +203,21 @@ static void mqttConnect(int reconnect)
             IOT_ERROR("aws_iot_mqtt_init returned error : %d ", rc);
             exit(-1);
         }
-	    // disable client certificate authentication and UniquID authentication
+        // disable client certificate authentication and UniquID authentication
         client.networkStack.tlsConnectParams.pUniqIDAuth = NULL;
         client.networkStack.tlsConnectParams.pDeviceCertLocation = "";
 
     }
     if (aws_iot_mqtt_is_client_connected(&client)) return ;
-    
 
-    // Try to connect 
-	connectParams.keepAliveIntervalInSec = 60;
-	connectParams.isCleanSession = true;
-	connectParams.MQTTVersion = MQTT_3_1_1;
-	connectParams.pClientID = ClientID;
-	connectParams.clientIDLen = (uint16_t) strlen(ClientID);
-	connectParams.isWillMsgPresent = false;
+
+    // Try to connect
+    connectParams.keepAliveIntervalInSec = 60;
+    connectParams.isCleanSession = true;
+    connectParams.MQTTVersion = MQTT_3_1_1;
+    connectParams.pClientID = ClientID;
+    connectParams.clientIDLen = (uint16_t) strlen(ClientID);
+    connectParams.isWillMsgPresent = false;
     while ((rc = aws_iot_mqtt_connect(&client, &connectParams)) != SUCCESS) {
         DBG_Print("mqtt Failed to connect, return code %d\n", rc);
         sleep(10);
@@ -313,9 +313,9 @@ int mqttProviderSendMsg(char *send_topic, uint8_t *msg, size_t size)
 static void connlost(AWS_IoT_Client *pClient, void *context)
 {
 (void)context;
-	if(NULL == pClient) {
-		return;
-	}
+    if(NULL == pClient) {
+        return;
+    }
     mqtt_connected = 0;
     DBG_Print("\nmqtt Connection lost\n");
     sleep(10);
@@ -332,7 +332,7 @@ static void connlost(AWS_IoT_Client *pClient, void *context)
  */
 void *mqttWorker(void *ctx)
 {
-	//pthread_t thr;
+    //pthread_t thr;
     ClientID = ctx;
     ServerTopic = ctx;
     mqttConnect(0);
@@ -346,7 +346,7 @@ void *mqttWorker(void *ctx)
         pthread_mutex_lock(&(sync_msg.mtx));
         if (sync_msg.val & USER_BUFFER_HAS_DATA) {
             // I have an user message! working on it
-            
+
             if(NULL != ClientTopic) {
                 aws_iot_mqtt_unsubscribe(&client, ClientTopic, strlen(ClientTopic));
                 free(ClientTopic);
@@ -371,7 +371,7 @@ void *mqttWorker(void *ctx)
         }
         if (sync_msg.val & PROVIDER_BUFFER_HAS_DATA) {
             // I have a provider message! working on it
-            
+
             params_prvdSndMsg.payload = prvdSndMsg;
             params_prvdSndMsg.payloadLen = prvdSndLen;
             while (MQTT_CLIENT_NOT_IDLE_ERROR ==

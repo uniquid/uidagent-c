@@ -17,7 +17,7 @@
  * @file helpers.h
  *
  * some usefull funtions
- * 
+ *
  */
 
 
@@ -33,29 +33,29 @@
 #include <sys/socket.h>
 #include <time.h>
 
-#include "helpers.h" 
+#include "helpers.h"
 
 char *program_name;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// error � print a diagnostic and optionally exit 
+// error � print a diagnostic and optionally exit
 void error( int status, int err, char *fmt, ... )
 {
-	va_list ap;
+    va_list ap;
 
-	va_start( ap, fmt );
-	fprintf( stderr, "%d:%s: ", getpid(), program_name );
-	vfprintf( stderr, fmt, ap );
-	va_end( ap );
-	if ( err )
-		fprintf( stderr, ": %s (%d)\n", strerror( err ), err );
-	if ( status )
-		exit( status );
+    va_start( ap, fmt );
+    fprintf( stderr, "%d:%s: ", getpid(), program_name );
+    vfprintf( stderr, fmt, ap );
+    va_end( ap );
+    if ( err )
+        fprintf( stderr, ": %s (%d)\n", strerror( err ), err );
+    if ( status )
+        exit( status );
 }
 
 
-	
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Read characters from 'fd' until a newline is encountered. If a newline
@@ -64,7 +64,7 @@ void error( int status, int err, char *fmt, ... )
 // null-terminated and includes the newline character if it was read in the
 // first (n - 1) bytes. The function return value is the number of bytes
 // placed in buffer (which includes the newline character if encountered,
-// but excludes the terminating null byte). 
+// but excludes the terminating null byte).
 ssize_t readLine(int fd, void *buffer, size_t n)
 {
     ssize_t numRead;                    /* # of bytes fetched by last read() */
@@ -133,7 +133,7 @@ ssize_t ReadXBytes(int socket, void* buffer, unsigned int x)
 
         bytesRead += result;
     }
-	return bytesRead;
+    return bytesRead;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -146,29 +146,29 @@ ssize_t ReadXBytes(int socket, void* buffer, unsigned int x)
 // Returns: status code indicating success - 0 = success
 int WriteXBytes(const int sock, const char *const buffer, const size_t buflen)
 {
-	size_t					bytesWritten=0;
-	ssize_t					writeResult;
-	int						done=0;
+    size_t					bytesWritten=0;
+    ssize_t					writeResult;
+    int						done=0;
 
-	do {
-		writeResult=send(sock,buffer+bytesWritten,buflen-bytesWritten,MSG_NOSIGNAL);
-		if(writeResult==-1) {
-			if(errno==EINTR)
-				writeResult=0;
-			else {
-				bytesWritten=-1;
-				done=1;
-			}
-		}
-		else {
-			bytesWritten+=writeResult;
-			//if(writeResult==0)
-			if(bytesWritten == buflen)
-				done=1;
-		}	
-	} while(done==0);
+    do {
+        writeResult=send(sock,buffer+bytesWritten,buflen-bytesWritten,MSG_NOSIGNAL);
+        if(writeResult==-1) {
+            if(errno==EINTR)
+                writeResult=0;
+            else {
+                bytesWritten=-1;
+                done=1;
+            }
+        }
+        else {
+            bytesWritten+=writeResult;
+            //if(writeResult==0)
+            if(bytesWritten == buflen)
+                done=1;
+        }
+    } while(done==0);
 
-	return bytesWritten;
+    return bytesWritten;
 }
 
 static uint8_t mac[6];
@@ -194,13 +194,13 @@ FILE *logfile = NULL;
 
 void LOG_print( char *fmt, ... )
 {
-	va_list ap;
+    va_list ap;
 
     if (logfile == NULL) logfile = fopen("access.log", "a");
-	va_start( ap, fmt );
-	fprintf( logfile, "%ld: ", time(NULL) );
-	vfprintf( logfile, fmt, ap );
-	va_end( ap );
-	fflush(logfile);
+    va_start( ap, fmt );
+    fprintf( logfile, "%ld: ", time(NULL) );
+    vfprintf( logfile, fmt, ap );
+    va_end( ap );
+    fflush(logfile);
 }
 

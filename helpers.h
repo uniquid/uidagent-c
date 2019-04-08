@@ -11,8 +11,8 @@
  * @date   29/lug/2016
  * @author M. Palumbi
  */
- 
- 
+
+
 
 #pragma once
 #ifndef __HELPERS_H__
@@ -27,31 +27,31 @@
 
 #ifdef ENABLE_DBG_PRINT
 #define DBG_Print( ... ) \
-	{ \
-	printf("DBG:   %s L#%d ", __func__, __LINE__);  \
-	printf(__VA_ARGS__); \
-	}
+    { \
+    printf("DBG:   %s L#%d ", __func__, __LINE__);  \
+    printf(__VA_ARGS__); \
+    }
 #else
-	#define DBG_Print( ... )
+    #define DBG_Print( ... )
 #endif
 
 #ifdef ENABLE_ERROR_PRINT
 #define ERROR_Print( ... ) \
-	{ \
-	printf("ERROR: %s L#%d ", __func__, __LINE__);  \
-	printf(__VA_ARGS__); \
-	}
+    { \
+    printf("ERROR: %s L#%d ", __func__, __LINE__);  \
+    printf(__VA_ARGS__); \
+    }
 #else
-	#define ERROR_Print( ... )
+    #define ERROR_Print( ... )
 #endif
 
 #ifdef ENABLE_INFO_PRINT
 #define INFO_Print( ... ) \
-	{ \
-	printf(__VA_ARGS__); \
-	}
+    { \
+    printf(__VA_ARGS__); \
+    }
 #else
-	#define INFO_Print( ... )
+    #define INFO_Print( ... )
 #endif
 
 extern char *program_name;
