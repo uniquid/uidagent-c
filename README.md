@@ -18,7 +18,7 @@ It requires:
 ``git clone --recurse-submodules https://github.com/uniquid/uidcore-c.git``
 - Clone the **mbetls** code:<br>
 ``rm mbedTLS/README.txt``<br>
-``git clone https://github.com/ARMmbed/mbedtls.git mbedTLS``
+``git clone https://github.com/ARMmbed/mbedtls.git mbedTLS -b mbedtls-2.16.1``
 - Apply the provided patch, IoT-sdk.patch<br>
 ``cd ..``<br>
 ``git apply  external_libs/uidagent-c/IoT-sdk.patch``
